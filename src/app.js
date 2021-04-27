@@ -5,8 +5,10 @@ import express from 'express'
 import('./db/conn.js')
 import hbs from 'hbs'
 import bcrypt from 'bcrypt'
-
+import jwt from 'jsonwebtoken'
+import cookieParser from 'cookie-parser'
 import Bcryptdata from './models/registerd.js'
+import auth from './middleware/auth.js'
 import path from 'path'
 
 console.log(process.env.SECRET_KEY)
@@ -19,8 +21,9 @@ const __dirname = path.dirname(__filename)
 const app = express()
 
 const port = process.env.PORT || 5000
-
+// middlewares
 app.use(express.json())
+app.use(cookieParser())
 
 app.use(express.urlencoded({ extended: false }))
 
@@ -36,8 +39,32 @@ app.set('views', template_path)
 hbs.registerPartials(partials_path)
 
 app.get('/', (req, res) => {
+  console.log(`this is the cookie awesome ${req.cookies.jwt}`)
   console.log('hello from get')
   res.render('index')
+})
+
+app.get('/secret', auth, (req, res) => {
+  // console.log('hello from get')
+  console.log(`this is the cookie awesome ${req.cookies.jwt}`)
+  res.render('secret')
+})
+
+// logoOut User
+app.get('/logout', auth, async (req, res) => {
+  try {
+    console.log(req.user)
+    req.user.tokens = req.user.tokens.filter((currElement) => {
+      return currElement.token !== req.token
+    })
+    // req.user.tokens = []
+    res.clearCookie('jwt')
+    console.log('logout successfully')
+    await req.user.save()
+    res.render('login')
+  } catch (error) {
+    res.status(500).send(error)
+  }
 })
 
 app.get('/register', (req, res) => {
@@ -61,6 +88,15 @@ app.post('/register', async (req, res) => {
 
       const token = await registeremployee.generateAuthToken()
       console.log('the token part ' + token)
+
+      // The res.cookie() function is used to set the cookie name to value.
+      // The value parameter may be a string or subject or object converted to JSON
+      res.cookie('jwt', token, {
+        maxAge: 86400 * 1000, // 24 hours
+        // expires: new Date(Date.now() + 80000),
+        httpOnly: true,
+      })
+      // console.log(cookie)
 
       const registered = await registeremployee.save()
       console.log('the page part' + registered)
@@ -90,6 +126,14 @@ app.post('/login', async (req, res) => {
 
     const token = await useremail.generateAuthToken()
     console.log('the token part ' + token)
+
+    // cookie setup
+
+    res.cookie('jwt', token, {
+      expires: new Date(Date.now() + 90000),
+      httpOnly: true,
+      // secure:true
+    })
 
     if (isMatch) {
       res.render('index')
