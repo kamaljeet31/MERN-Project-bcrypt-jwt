@@ -1,6 +1,7 @@
 import mongoose from 'mongoose'
 import bcrypt from 'bcrypt'
 import jwt from 'jsonwebtoken'
+import validator from 'validator'
 
 const bcryptschema = new mongoose.Schema({
   name: {
@@ -10,7 +11,12 @@ const bcryptschema = new mongoose.Schema({
   email: {
     type: String,
     required: true,
-    unique: true,
+    unique: [true, 'Email id already present'],
+    Validate(value) {
+      if (!validator.isEmail(value)) {
+        throw new Error('Invalid Email')
+      }
+    },
   },
   password: {
     type: String,
@@ -18,7 +24,7 @@ const bcryptschema = new mongoose.Schema({
   },
   confirmpassword: {
     type: String,
-    required: true,
+    required: true, 
   },
   tokens: [
     {

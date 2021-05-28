@@ -9,6 +9,6 @@ mongoose
   .then((req, res) => {
     console.log('connection successful')
   })
-  .catch((e) => {
+  .catch((err) => {
     console.log('no connection')
   })
